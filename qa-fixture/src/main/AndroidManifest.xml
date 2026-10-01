@@ -1,0 +1,5 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<application android:label="Navelo test media" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:allowBackup="false">
+<activity android:name=".FolderPicker" android:exported="true"><intent-filter><action android:name="android.intent.action.OPEN_DOCUMENT_TREE"/><category android:name="android.intent.category.DEFAULT"/></intent-filter></activity>
+<provider android:name=".MediaDocuments" android:authorities="app.navelo.fixture.documents" android:exported="true" android:grantUriPermissions="true" android:permission="android.permission.MANAGE_DOCUMENTS"><intent-filter><action android:name="android.content.action.DOCUMENTS_PROVIDER"/></intent-filter></provider>
+</application></manifest>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Navelo.TV" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowBackground">@drawable/navelo_launch</item>
+        <item name="android:colorAccent">@color/navelo_mint</item>
+        <item name="android:statusBarColor">@color/navelo_navy</item>
+        <item name="android:navigationBarColor">@color/navelo_navy</item>
+    </style>
+</resources>

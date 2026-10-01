@@ -17,6 +17,8 @@ data class ServerState(
     val streamingTitle: String? = null,
     val port: Int = 8765,
     val serverId: String = "",
+    val displayName: String = "",
+    val customServerName: Boolean = false,
 )
 
 @Serializable

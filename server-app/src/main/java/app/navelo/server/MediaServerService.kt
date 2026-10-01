@@ -28,6 +28,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 class MediaServerService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -35,6 +37,7 @@ class MediaServerService : Service() {
     private var httpServer: MediaHttpServer? = null
     private var advertiser: NaveloAdvertiser? = null
     private var cleanupJob: Job? = null
+    private var nameJob: Job? = null
     private var storageRescanJob: Job? = null
     private var started = false
     private var receiverRegistered = false
@@ -71,6 +74,7 @@ class MediaServerService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        nameJob?.cancel()
         cleanupJob?.cancel()
         storageRescanJob?.cancel()
         runCatching { contentResolver.unregisterContentObserver(contentObserver) }
@@ -94,8 +98,11 @@ class MediaServerService : Service() {
             val server = MediaHttpServer(this, runtime, Protocol.PORT)
             server.start(SOCKET_TIMEOUT_MS, false)
             httpServer = server
-            advertiser = NaveloAdvertiser(this).also {
-                it.start(runtime.state.value.serverId, ServerRuntime.DISPLAY_NAME, Protocol.PORT)
+            advertiser = NaveloAdvertiser(this)
+            nameJob = scope.launch {
+                runtime.state.map { it.displayName }.distinctUntilChanged().collect { name ->
+                    advertiser?.start(runtime.state.value.serverId, name, Protocol.PORT)
+                }
             }
             runtime.onServerStarted(::refreshNotification)
             refreshNotification()

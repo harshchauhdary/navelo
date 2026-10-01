@@ -24,6 +24,14 @@ internal class ServerPersistence(context: Context) {
     private val secureStore = SecureStore(appContext, "navelo_server")
     private val fallbackPreferences = appContext.getSharedPreferences("navelo_server_identity", Context.MODE_PRIVATE)
 
+    fun loadServerName(): String? = fallbackPreferences.getString("display_name", null)
+
+    fun saveServerName(name: String?) {
+        check(fallbackPreferences.edit().apply {
+            if (name == null) remove("display_name") else putString("display_name", name)
+        }.commit()) { "Could not save the server name. Please try again." }
+    }
+
     suspend fun loadOrCreateServerId(): String {
         val dataStoreId = runCatching {
             appContext.naveloServerPreferences.data.first()[SERVER_ID]?.takeIf(String::isNotBlank)

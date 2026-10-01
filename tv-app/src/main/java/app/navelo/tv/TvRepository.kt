@@ -483,6 +483,11 @@ class TvRepository(context: Context) {
                         val info = publicServerInfo(server)
                         if (info.serverId != server.serverId) throw IllegalArgumentException("identity")
                         updateServerCapabilities(info)
+                        if (state.value.serverName != info.displayName) {
+                            selectedServer = server.copy(displayName = info.displayName)
+                            mutableState.update { it.copy(serverName = info.displayName) }
+                            persistConnection()
+                        }
                         if (info.libraryRevision != cachedRevision) refreshNow()
                         reconnectFailures = 0
                         nextReconnectAt = System.currentTimeMillis() + 30_000
@@ -542,7 +547,7 @@ class TvRepository(context: Context) {
                 mutableState.update { it.copy(items = emptyList(), metadata = emptyMap(), watch = emptyMap()) }
             }
             updateServerCapabilities(info)
-            selectedServer = server
+            selectedServer = server.copy(displayName = info.displayName)
             mutableState.update { it.copy(serverName = info.displayName, online = true) }
             persistConnection()
 

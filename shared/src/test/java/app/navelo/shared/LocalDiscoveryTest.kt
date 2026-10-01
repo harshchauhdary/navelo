@@ -26,6 +26,25 @@ class LocalDiscoveryTest {
             }
         } finally { host.stop() }
     }
+    @Test fun renamingUpdatesHotspotDiscoveryWithoutChangingIdentity() {
+        val host = LocalAnnouncer()
+        try {
+            for (name in listOf("Pixel 9", "Bedroom media")) {
+                host.start("stable-phone-id", name, 9876)
+                DatagramSocket().use { client ->
+                    client.soTimeout = 2500
+                    client.send(DatagramPacket(LocalDiscovery.QUERY, LocalDiscovery.QUERY.size, InetAddress.getLoopbackAddress(), LocalDiscovery.PORT))
+                    val packet = DatagramPacket(ByteArray(1024), 1024)
+                    client.receive(packet)
+                    val beacon = Protocol.json.decodeFromString<LocalDiscovery.Beacon>(packet.data.copyOfRange(0, packet.length).toString(Charsets.UTF_8))
+                    assertEquals("stable-phone-id", beacon.id)
+                    assertEquals(name, beacon.name)
+                    assertEquals(9876, beacon.port)
+                }
+            }
+        } finally { host.stop() }
+    }
+
     @Test fun unrelatedUdpDoesNotExposeAnything() {
         val host = LocalAnnouncer(); host.start("a","Phone",8765)
         try {

@@ -296,6 +296,7 @@ private fun PairingScreen(state: TvState, onConnect: (app.navelo.shared.Discover
                 }
                 else -> {
                     Text("Navelo found", style = MaterialTheme.typography.titleLarge, color = NaveloMint)
+                    val serverLabels = app.navelo.shared.ServerNames.labels(state.discovered)
                     state.discovered.forEachIndexed { index, server ->
                         Button(
                             onClick = { onConnect(server) },
@@ -303,7 +304,7 @@ private fun PairingScreen(state: TvState, onConnect: (app.navelo.shared.Discover
                         ) {
                             Icon(Icons.Rounded.Tv, contentDescription = null)
                             Spacer(Modifier.width(10.dp))
-                            Text("Connect to ${server.displayName}")
+                            Text("Connect to ${serverLabels.getValue(server.serverId)}")
                         }
                     }
                 }

@@ -31,8 +31,8 @@ android {
         applicationId = "app.navelo.server"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.0.3"
+        versionCode = 5
+        versionName = "1.0.4"
         buildConfigField("String", "NAVELO_TMDB_READ_TOKEN", naveloTmdbReadToken.asBuildConfigStringLiteral())
     }
     buildFeatures { compose = true; buildConfig = true }

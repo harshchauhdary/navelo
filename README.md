@@ -9,7 +9,7 @@ This repository builds two independent applications:
 
 Both require Android 8.0/API 26 or newer and target API 36. The implementation uses Kotlin 2.1.20, Java 17, Compose, coroutines, DataStore, Android's Storage Access Framework, Android NSD, NanoHTTPD, Media3, OkHttp, and Coil.
 
-The current update is **1.0.3**, adding clearer TV settings, action feedback and improved automatic title/year matching. [Physical-device follow-up](docs/DEVICE_FIXES.md) preserves the historical 1.0.1 Xiaomi TV crash, remote-control, splash, and offline-thumbnail evidence.
+The current update is **1.0.4**, adding device-based server names, custom naming in phone settings, duplicate-name labels on TV, and paired-TV management from the phone home screen. [Physical-device follow-up](docs/DEVICE_FIXES.md) preserves the historical 1.0.1 Xiaomi TV crash, remote-control, splash, and offline-thumbnail evidence.
 
 ## Build and install
 
@@ -90,6 +90,8 @@ Discovery works in both required topologies:
 
 The server advertises `_navelo._tcp.` over Android NSD/mDNS. A small UDP fallback also probes interface broadcasts, the limited broadcast address, and default gateways on port 8766. This covers hotspot and router firmware that filters multicast. The TV accepts the datagram's source address, then validates the public `/api/v1/server` identity; it never trusts an advertised URL. Discovery has no internet or validated-network requirement.
 
+Server names default to the Android device name when available, otherwise the manufacturer and model. In phone **Settings → Server name**, save a custom name or select **Use device name** to reset it. Names update in discovery and on the TV without changing the server UUID or pairing. The TV adds a short stable ID to discovery labels when multiple servers have the same name.
+
 Pairing resembles connecting a household device: the TV shows the discovered phone and a six-digit verification code, the phone names the requesting TV, and the owner taps **Allow**. Requests expire after five minutes. Approval also requires the request's random client secret, so the displayed code alone cannot grant access. The TV encrypts its bearer credential with Android Keystore; the phone stores only its SHA-256 hash and lets the owner revoke a device. Trust follows the server UUID across router restarts, hotspot changes, and new IP addresses.
 
 ## 5. Navelo Server features
@@ -139,7 +141,7 @@ The test-only document provider enables emulator checks with a real persisted SA
 
 ## 11. Build results
 
-The 1.0.3 settings update passes all 67 JVM tests in debug and release (134 executions). See [settings update evidence](docs/SETTINGS_FEEDBACK.md) for validation and device checks, and [metadata migration evidence](docs/METADATA_MIGRATION.md) for the earlier 1.0.2 provider tests. The original emulator baseline remains in [verification evidence](docs/VERIFICATION.md).
+The 1.0.4 update includes regression coverage for device-name fallback, duplicate-name labels, and renamed UDP discovery with unchanged server identity. The 1.0.3 settings update passed all 67 JVM tests in debug and release (134 executions). See [settings update evidence](docs/SETTINGS_FEEDBACK.md) for validation and device checks, and [metadata migration evidence](docs/METADATA_MIGRATION.md) for the earlier 1.0.2 provider tests. The original emulator baseline remains in [verification evidence](docs/VERIFICATION.md).
 
 ## 12. Server APK
 

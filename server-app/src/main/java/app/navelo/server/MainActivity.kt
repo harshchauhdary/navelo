@@ -171,7 +171,10 @@ class MainActivity : ComponentActivity() {
                             PairCard(pending, { scope.launch { runtime.approve(pending.requestId) } }, { scope.launch { runtime.deny(pending.requestId) } })
                             Spacer(Modifier.height(16.dp))
                         }
-                        SectionLabel("YOUR TV")
+                        Row(Modifier.fillMaxWidth(), verticalAlignment=Alignment.CenterVertically) {
+                            Text("Your TV", style=MaterialTheme.typography.titleLarge, modifier=Modifier.weight(1f))
+                            TextButton(onClick={screen="tvs"}) { Text("Manage") }
+                        }
                         if(state.devices.isEmpty()) {
                             Benefit(Icons.Rounded.Tv, "Ready to meet your TV", "Open Navelo on your TV and choose this phone. Both devices can use your Wi-Fi or this phone's hotspot.")
                         } else state.devices.forEach { device ->
@@ -191,6 +194,30 @@ class MainActivity : ComponentActivity() {
                         if(state.running) OutlinedButton(onClick={runtime.stop()}, modifier=Modifier.fillMaxWidth().heightIn(min=52.dp)) { Text("Pause sharing") }
                         else Button(onClick={begin()}, enabled=state.roots.isNotEmpty(), modifier=Modifier.fillMaxWidth().heightIn(min=56.dp)) { Text("Start Navelo") }
                     }
+                    "tvs" -> {
+                        Headline("Your TV", "Manage the TVs allowed to play your media. A removed TV will need your approval to connect again.")
+                        Spacer(Modifier.height(20.dp))
+                        var removingTv by remember { mutableStateOf<String?>(null) }
+                        var tvFeedback by remember { mutableStateOf<String?>(null) }
+                        if (state.devices.isEmpty()) {
+                            Benefit(Icons.Rounded.Tv, "No paired TVs", "Open Navelo on your TV and choose this phone to connect.")
+                        }
+                        state.devices.forEach { device ->
+                            ListItem(
+                                headlineContent={Text(device.displayName, fontWeight=FontWeight.SemiBold)},
+                                supportingContent={Text("Allowed to play your media")},
+                                leadingContent={Icon(Icons.Rounded.Tv, null)},
+                                trailingContent={TextButton(enabled=removingTv == null, onClick={scope.launch {
+                                    removingTv = device.clientId
+                                    runCatching { runtime.revoke(device.clientId) }
+                                        .onSuccess { tvFeedback = "${device.displayName} removed" }
+                                        .onFailure { tvFeedback = "Could not remove this TV. Please try again." }
+                                    removingTv = null
+                                }}) { Text(if (removingTv == device.clientId) "Removing…" else "Remove") }},
+                            )
+                        }
+                        tvFeedback?.let { Text(it, Modifier.padding(top=12.dp)) }
+                    }
                     "media" -> {
                         Headline("Your media", "Add folders from this phone or an SD card. Your files stay right where they are.")
                         Spacer(Modifier.height(20.dp))
@@ -208,6 +235,33 @@ class MainActivity : ComponentActivity() {
                     }
                     "settings" -> {
                         Headline("Settings", "A few things to make Navelo yours.")
+                        Spacer(Modifier.height(24.dp)); SectionLabel("SERVER NAME")
+                        var nameDraft by remember(state.displayName) { mutableStateOf(state.displayName) }
+                        var nameFeedback by remember { mutableStateOf<String?>(null) }
+                        var savingName by remember { mutableStateOf(false) }
+                        OutlinedTextField(
+                            value = nameDraft, onValueChange = { nameDraft = it; nameFeedback = null },
+                            label = { Text("Server name") }, singleLine = true,
+                            modifier = Modifier.fillMaxWidth(), enabled = !savingName,
+                            supportingText = { Text("Shown on your TV · up to 60 characters") },
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(enabled = !savingName && state.serverId.isNotBlank(), onClick = { scope.launch {
+                                savingName = true
+                                runCatching { runtime.renameServer(nameDraft) }
+                                    .onSuccess { nameFeedback = "Server name saved" }
+                                    .onFailure { nameFeedback = it.message ?: "Could not save the name" }
+                                savingName = false
+                            } }) { Text(if (savingName) "Saving…" else "Save name") }
+                            TextButton(enabled = !savingName && state.customServerName, onClick = { scope.launch {
+                                savingName = true
+                                runCatching { runtime.renameServer(null) }
+                                    .onSuccess { nameFeedback = "Using device name" }
+                                    .onFailure { nameFeedback = it.message ?: "Could not reset the name" }
+                                savingName = false
+                            } }) { Text("Use device name") }
+                        }
+                        nameFeedback?.let { Text(it, Modifier.padding(top = 8.dp)) }
                         Spacer(Modifier.height(24.dp)); SectionLabel("APPEARANCE")
                         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                             listOf("System","Light","Dark").forEach { value -> FilterChip(selected=appearance==value, onClick={scope.launch {
@@ -216,13 +270,10 @@ class MainActivity : ComponentActivity() {
                             }}, label={Text(value)}) }
                         }
                         if(Build.VERSION.SDK_INT>=31) ListItem(headlineContent={Text("Use phone colours")}, trailingContent={Switch(checked=dynamic,onCheckedChange={value -> scope.launch{context.uiStore.edit { it[dynamicKey]=value }} })})
-                        Spacer(Modifier.height(24.dp)); SectionLabel("PAIRED TELEVISIONS")
-                        if(state.devices.isEmpty()) Text("Your TV will appear here after you connect it.", Modifier.padding(vertical=12.dp))
-                        state.devices.forEach { device -> ListItem(headlineContent={Text(device.displayName)}, supportingContent={Text("Allowed to play your media")}, trailingContent={TextButton(onClick={scope.launch{runtime.revoke(device.clientId)}}){Text("Remove")}}) }
                         Spacer(Modifier.height(24.dp)); SectionLabel("PRIVACY")
                         Text("Your videos stay on this phone. Navelo sends them directly to your paired TV. Only movie and show searches for artwork leave your local network. Your watch history stays on your TV. No account, advertising or analytics.", Modifier.padding(vertical=12.dp), style=MaterialTheme.typography.bodyLarge)
                         TextButton(onClick={screen="advanced"}){Text("Advanced")}
-                        Text("Navelo 1.0.1 · Made for movie night", Modifier.padding(top=20.dp), style=MaterialTheme.typography.bodySmall)
+                        Text("Navelo ${BuildConfig.VERSION_NAME} · Made for movie night", Modifier.padding(top=20.dp), style=MaterialTheme.typography.bodySmall)
                     }
                     "advanced" -> {
                         Headline("Connection details", "For the person who looks after your devices.")

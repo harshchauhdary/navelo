@@ -3,6 +3,9 @@ package app.navelo.server
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import app.navelo.shared.ServerNames
 import androidx.core.content.ContextCompat
 import app.navelo.shared.ItemsResponse
 import app.navelo.shared.LibraryResponse
@@ -59,6 +62,7 @@ class ServerRuntime private constructor(context: Context) {
         scope.launch {
             runCatching {
                 val serverId = persistence.loadOrCreateServerId()
+                val customName = persistence.loadServerName()?.let(ServerNames::clean)?.takeIf(String::isNotBlank)
                 metadata.restore()
                 val restored = library.restore()
                 metadata.onLibraryChanged(restored.items.map { it.item })
@@ -69,14 +73,30 @@ class ServerRuntime private constructor(context: Context) {
                         devices = pairing.trustedRecords().map(TrustedRecord::publicValue),
                         pending = pairing.pending(),
                         serverId = serverId,
+                        displayName = customName ?: defaultServerName(),
+                        customServerName = customName != null,
                     )
                 }
             }.onFailure { failure ->
                 pairing = PairingManager(emptyList())
-                _state.update { it.copy(serverId = UUID.randomUUID().toString(), message = userMessage(failure)) }
+                _state.update { it.copy(serverId = UUID.randomUUID().toString(), displayName = defaultServerName(), message = userMessage(failure)) }
             }
             initialized.complete(Unit)
         }
+    }
+
+    private fun defaultServerName(): String = ServerNames.defaultName(
+        runCatching { Settings.Global.getString(appContext.contentResolver, "device_name") }.getOrNull(),
+        Build.MANUFACTURER, Build.MODEL,
+    )
+
+    suspend fun renameServer(value: String?) {
+        initialized.await()
+        val name = value?.let(ServerNames::clean)
+        require(name == null || name.isNotBlank()) { "Enter a server name." }
+        require(name == null || name.length <= ServerNames.MAX_LENGTH) { "Use 60 characters or fewer." }
+        withContext(Dispatchers.IO) { persistence.saveServerName(name) }
+        _state.update { it.copy(displayName = name ?: defaultServerName(), customServerName = name != null) }
     }
 
     fun start() {
@@ -151,7 +171,7 @@ class ServerRuntime private constructor(context: Context) {
         val scan = scanRequests.status()
         return ServerInfo(
             serverId = state.value.serverId,
-            displayName = DISPLAY_NAME,
+            displayName = state.value.displayName,
             libraryRevision = snapshot.revision,
             scanGeneration = scan.generation,
             completedScanGeneration = scan.completed,
@@ -321,7 +341,6 @@ class ServerRuntime private constructor(context: Context) {
     }
 
     companion object {
-        const val DISPLAY_NAME = "Media Phone"
         private const val CONNECTED_VISIBLE_MS = 60_000L
         private const val PLAYBACK_VISIBLE_MS = 2 * 60_000L
         @Volatile private var instance: ServerRuntime? = null
